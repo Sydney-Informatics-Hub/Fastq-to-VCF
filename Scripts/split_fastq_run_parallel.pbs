@@ -1,0 +1,60 @@
+#!/bin/bash
+
+##########################################################################
+#
+# Platform: NCI Gadi HPC
+# Usage: 
+# Version: 
+#
+# For more details see: https://github.com/Sydney-Informatics-Hub/Fastq-to-VCF
+#
+# If you use this script towards a publication, please acknowledge the
+# Sydney Informatics Hub.
+#
+# Suggested acknowledgement:
+# The authors acknowledge the support provided by the Sydney Informatics Hub,
+# a Core Research Facility of the University of Sydney. This research
+# was undertaken with the assistance of resources and services from the National
+# Computational Infrastructure (NCI), which is supported by the Australian
+# Government, and the Australian BioCommons which is enabled by NCRIS via
+# Bioplatforms Australia funding.
+#
+##########################################################################
+
+#PBS -P xh27
+#PBS -N split_fastq
+#PBS -l walltime=00:30:00
+#PBS -l ncpus=16
+#PBS -l mem=64GB
+#PBS -q normal
+#PBS -W umask=022
+#PBS -l wd
+#PBS -o ./PBS_logs/split_fastq.o
+#PBS -e ./PBS_logs/split_fastq.e
+#PBS -lstorage=scratch/er01+gdata/er01
+
+module load nci-parallel/1.0.0a
+module load fastp/0.20.0
+
+set -e
+
+SCRIPT=./Scripts/split_fastq.sh
+INPUTS=./Inputs/split_fastq.inputs
+
+NCPUS=4 
+
+ 
+#########################################################
+# Do not edit below this line
+#########################################################
+
+M=$(( PBS_NCI_NCPUS_PER_NODE / NCPUS )) #tasks per node
+
+sed "s|^|${SCRIPT} |" ${INPUTS} > ${PBS_JOBFS}/input-file
+
+mpirun --np $((M * PBS_NCPUS / PBS_NCI_NCPUS_PER_NODE)) \
+        --map-by node:PE=${NCPUS} \
+        nci-parallel \
+        --verbose \
+        --input-file ${PBS_JOBFS}/input-file
+

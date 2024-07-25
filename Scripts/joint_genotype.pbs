@@ -1,0 +1,59 @@
+#!/bin/bash
+
+ ##########################################################################
+#
+# Platform: NCI Gadi HPC
+# Usage: Do not execute this script directly
+# Version: 
+#
+# For more details see: https://github.com/Sydney-Informatics-Hub/Fastq-to-VCF
+#
+# If you use this script towards a publication, please acknowledge the
+# Sydney Informatics Hub.
+#
+# Suggested acknowledgement:
+# The authors acknowledge the support provided by the Sydney Informatics Hub,
+# a Core Research Facility of the University of Sydney. This research
+# was undertaken with the assistance of resources and services from the National
+# Computational Infrastructure (NCI), which is supported by the Australian
+# Government, and the Australian BioCommons which is enabled by NCRIS via
+# Bioplatforms Australia funding.
+#
+##########################################################################
+ 
+#PBS -P xh27
+#PBS -l walltime=02:00:00
+#PBS -l ncpus=6
+#PBS -l mem=192GB
+#PBS -q hugemem
+#PBS -W umask=022
+#PBS -l wd
+#PBS -o ./PBS_logs/joint_genotype.o
+#PBS -e ./PBS_logs/joint_genotype.e
+#PBS -l jobfs=400GB
+#PBS -lstorage=scratch/er01+gdata/er01
+
+module load singularity
+module load bcftools
+module load htslib
+
+glnexus_container=/scratch/er01/cew562/singularity/glnexus_v1.4.1.sif
+
+cohort=Plat_trio_test
+
+# simply make inputs with: ls -1 gVCF/*vcf.gz > Inputs/joint_genotype.inputs
+inputs=./Inputs/joint_genotype.inputs
+
+logdir=./Logs/GLnexus
+outdir=./Joint_VCF
+
+mkdir -p ${logdir} ${outdir}
+
+singularity run ${glnexus_container} \
+    glnexus_cli \
+    --dir ${PBS_JOBFS}/GLNexus.db \
+    --config DeepVariantWGS \
+    --list ${inputs} > ${outdir}/${cohort}.bcf 2> ${logdir}/${cohort}.log
+
+bcftools view ${outdir}/${cohort}.bcf | bgzip -c > ${outdir}/${cohort}.vcf.gz
+tabix -p vcf ${outdir}/${cohort}.vcf.gz

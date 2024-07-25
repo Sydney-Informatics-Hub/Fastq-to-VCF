@@ -1,0 +1,41 @@
+#!/bin/bash
+
+##########################################################################
+#
+# Platform: NCI Gadi HPC
+# Usage: Do not execute this script directly
+# Version: 
+#
+# For more details see: https://github.com/Sydney-Informatics-Hub/Fastq-to-VCF
+#
+# If you use this script towards a publication, please acknowledge the
+# Sydney Informatics Hub.
+#
+# Suggested acknowledgement:
+# The authors acknowledge the support provided by the Sydney Informatics Hub,
+# a Core Research Facility of the University of Sydney. This research
+# was undertaken with the assistance of resources and services from the National
+# Computational Infrastructure (NCI), which is supported by the Australian
+# Government, and the Australian BioCommons which is enabled by NCRIS via
+# Bioplatforms Australia funding.
+#
+##########################################################################
+ 
+#PBS -P xh27
+#PBS -l walltime=00:30:00
+#PBS -l ncpus=48
+#PBS -l ngpus=4
+#PBS -l mem=126GB
+#PBS -q gpuvolta
+#PBS -W umask=022
+#PBS -l wd
+#PBS -lstorage=scratch/er01+gdata/er01
+
+module load parabricks/4.2.1
+
+pbrun deepvariant \
+    --ref ${ref} \
+    --in-bam ${bam} \
+    --gvcf \
+    --logfile ${log} \
+    --out-variants ${vcf}

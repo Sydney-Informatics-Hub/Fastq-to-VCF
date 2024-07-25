@@ -1,0 +1,44 @@
+#!/bin/bash 
+
+##########################################################################
+#
+# Platform: NCI Gadi HPC
+# Usage:
+# Version: 
+#
+# For more details see: https://github.com/Sydney-Informatics-Hub/Fastq-to-VCF
+#
+# If you use this script towards a publication, please acknowledge the
+# Sydney Informatics Hub.
+#
+# Suggested acknowledgement:
+# The authors acknowledge the support provided by the Sydney Informatics Hub,
+# a Core Research Facility of the University of Sydney. This research
+# was undertaken with the assistance of resources and services from the National
+# Computational Infrastructure (NCI), which is supported by the Australian
+# Government, and the Australian BioCommons which is enabled by NCRIS via
+# Bioplatforms Australia funding.
+#
+##########################################################################
+
+
+
+#PBS -P xh27 
+#PBS -N index_ref 
+#PBS -l walltime=05:00:00 
+#PBS -l ncpus=6
+#PBS -l mem=192GB 
+#PBS -q hugemem 
+#PBS -W umask=022 
+#PBS -l wd 
+#PBS -o ./PBS_logs/index_reference.o 
+#PBS -e ./PBS_logs/index_reference.e 
+#PBS -lstorage=scratch/er01+gdata/er01
+
+module load bwa-mem2/2.2.1 samtools/1.19   
+
+ref=./Reference/GCF_009914755.1_T2T-CHM13v2.0_genomic.fasta
+
+bwa-mem2 index ${ref}
+
+samtools faidx ${ref}

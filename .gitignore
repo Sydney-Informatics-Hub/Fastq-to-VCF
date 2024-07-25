@@ -1,0 +1,18 @@
+# Ignore entire directories
+FastQC/
+Fastq_split/
+Align_split/
+Final_bam/
+Split_disc/
+gVCF/
+Joint_VCF/
+
+# Ignore contents but keep the empty directory 
+Fastq/*
+Inputs/*
+Logs/*
+PBS_logs/*
+Reference/*
+
+# Ignore the config
+Plat_trio_test.config
