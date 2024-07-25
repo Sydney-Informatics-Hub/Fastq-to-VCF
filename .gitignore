@@ -9,10 +9,15 @@ Joint_VCF/
 
 # Ignore contents but keep the empty directory 
 Fastq/*
+!Fastq/.gitkeep
 Inputs/*
+!Inputs/.gitkeep
 Logs/*
+!Logs/.gitkeep
 PBS_logs/*
+!PBS_logs/.gitkeep
 Reference/*
+!Reference/.gitkeep
 
 # Ignore the config
 Plat_trio_test.config
