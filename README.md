@@ -25,6 +25,16 @@ All software used in this workflow are globally installed on Gadi, except GLnexu
 
 ## Example configuration file
 
+Explanation of columns
+1. The unique identifier that can be used to associate all fastq files that belong to the sample. Must be unique in the cohort and present as prefix for all fastq files belonging to the sample
+2. The sample ID that you want to use in your final output files eg BAM, VCF. Can be the same as column 1 or different. Must be unique in the cohort 
+3. The sequencing centre that produced the fastq (no whiteespace)
+4. Library ID. Can be left blank if not relevant; will default to '1'
+
+| #SampleID | LabSampleID  | Seq_centre | Lib |
+|-----------|--------------|------------|-----|
+| NA12890   | NA12890_mini | Unknown    | 1   |
+| NA12878   | NA12878_mini | Unknown    | 1   |
 
 # Run the workflow
 
