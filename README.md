@@ -38,13 +38,26 @@ Explanation of columns
 
 
 # Parallelisation
-Some steps are parallel by sample, and other steps are parallel by fastq. Alignment is executed after first splitting the fastq up into smaller pairs, to enable a much higher degree of parallelisation than simply aligning the fastq pairs as-is.  Only the MultiQC and final joint genotyping steps are executed as single (not parallel) jobs. 
+Some steps are parallel by sample, and other steps are parallel by fastq ("scatter gather parallelism"). Alignment is executed after first splitting the fastq up into smaller pairs, to enable a much higher degree of parallelisation than simply aligning the fastq pairs as-is.  Only the MultiQC and final joint genotyping steps are executed as single (not parallel) jobs. 
 
 For the parallel jobs, there are 3 workflow scripts per step:
 
 1. `<stepname>_make_input.sh`: This script is executed on the login node with `bash`, and creates the input file required to parallelise the tasks. Each line in the output file `Inputs/<stepname>.inputs` contains the details for one parallel task such as sample ID, fastq, reference, etc. The PBS script (2) will launch the task script (3) once for every line in this 'inputs' file. Any changes regarding the inputs (such as reference sequence name) should be made in this script; no parameter changes should be required in the PBS (2) or task(3) script. 
 2. `<stepname>_run_parallel.sh`: This script is submitted with `qsub` and runs the parallel job. Users will need to edit the NCI project code, `lstorage` directory, and resource requests. Note that the requests for the job are for the *whole* job, not for each single task. The variable `NCPUS` within the script body sets the number of CPUs that are allocated to each single task. Tasks may be executed all at once (eg 4 NCPUs per task, 24 tasks, running on 4 x 24 = 96 CPUs). If the total number of CPUs requested for the job is less than the number required to run all at tasks at once, the job wil simply assign tasks to CPUs in the order in which they appear in the inputs list, until all taks are run, or walltime is exceeded. For jobs where all tasks are expected to have similar walltime, requesting the number of total CPUs such that all tasks can be run at once (up to the Gadi queue limits) is reasonable. For jobs where unequal walltimes are expected, for example in cancer studies where tumour has greater coverage than normal samples, size-sorting the inputs largest to smallest or separating the job into separate batches with different inputs lists and walltimes will provide better CPU and KSU efficiency.
 3. `<stepname>.sh`: This is the task script that contains the commands required to run the job. It is launched once per task by the PBS script (2) and is not submitted directly by the user. There should not be need to edit this script unless changes to the actual analysis task are warranted. 
+
+# Benchmarking 
+
+SIH workflows aim to provide benchmarking metrics and resource usage guidelines. At the time of writing (uly 31 2024) this workflow is in its infancy so these details are not yet available. They will be added over time. 
+
+Parallel workflows always benefit from benchmarking. This extra workload at the start will save you time and KSU in the long run. At minimum, it is recommended to benchmark the alignment step, which uses the most KSU out of the whole workflow. The most efficient alignment threads and walltime per task will differ depending on the fastq split size, and will also vary somewhat between datasets, depending on reference genome quality, raw data quality, sample genetic complexity, etc. A starting split size of 10 million reads (split value of 40000000 lines) is a good starting point for benchmarking alignment against your indexed reference genome with 4, 6, 8 or 12 CPUs per alignment task.
+
+The duplicate marking and sorting step should also be tested on one sample (typically the largest BAM) to establish compute requirements for that step that cannot be parallelised via splitting. 
+
+We plan to develop a workshop on benchmarking bioinformatics workflows, but in this [benchmarking template](https://github.com/Sydney-Informatics-Hub/Gadi-benchmarking) may be useful. 
+
+Compute resource usage summary and CPU efficiency calculations can be obtained using this [Gadi usage report](https://github.com/Sydney-Informatics-Hub/HPC_usage_reports/blob/master/Scripts/gadi_usage_report.pl) script. To use, download a copy of the script, change into the directory where your PBS logs are saved, and run the script with perl. 
+
 
 # Logs
 
@@ -59,7 +72,7 @@ PBS logs are written to `PBS_logs`.
 
 The reference fasta to index should be within (or symlinked to) the `./Reference` directory. 
 
-This step need only be done once per reference. If previously generated indexes (with the same tool versions) are available, copy or symlink them to the `./Reference` directory along with the fasta. They must all have the same filename prefix. 
+This step need only be done once per reference. If previously generated indexes for [`bwa-mem2`](https://github.com/bwa-mem2/bwa-mem2) and [`SAMtools`](https://github.com/samtools/samtools)(with the same tool versions) are available, copy or symlink them to the `./Reference` directory along with the fasta. They must all have the same filename prefix. 
 
 Edit the script `Scripts/index_reference.pbs`:
 
@@ -142,28 +155,130 @@ Output report will be in `./MultiQC/FastQC`.
 
 Paired FASTQ files are split into smaller files with fastp v.0.20.0 [(Chen et al. 2018)](https://academic.oup.com/bioinformatics/article/34/17/i884/5093234) to enable higher levels of parallelisation. 
 
-The number of *lines* per output fastq file is governed by the `-S` parameter to `fastp`. If you would like to adjust the number of reads per split pair, edit the variable `split` within `Scripts/split_fastq_make_input.sh`. Note that `-S` adjusts the number of lines, so set `split` to the number of reads times 4. 
+### Fastq split size
 
-A split fastq pair containing 2 million read pairs (4 million reads total) on 12 CPU takes aproximately 2 minutes to align (human, T2T reference genome). The same data using 500,000 read splits requires around 1 minute. Creating split sizes that are too small can reduce efficiency due to the overhead of tool and reference index loading. 
+The number of *lines* per output fastq file is governed by the `-S` parameter to `fastp`. If you would like to adjust the number of reads per split pair, edit the variable `split` within `Scripts/split_fastq_make_input.sh`. Note that `-S` adjusts the number of lines, so set `split` to the number of desired reads per split fastq times 4. 
 
-Make inputs: 
+A split fastq pair containing 2 million read pairs (4 million reads total) on 12 CPU takes aproximately 2 minutes to align (human, T2T reference genome). The same data using 500,000 read splits requires around 1 minute. Creating split sizes that are too small can reduce efficiency due to the overhead of tool and reference index loading.
+
+Apart from adjusting the value of `split`, no other edits are required to the `make_input` script. 
+
+### Make parallel inputs file
 ```
 bash Scripts/split_fastq_make_input.sh
 ```
+### Edit the PBS script 
 
+Edit `Scripts/split_fastq_run_parallel.pbs`: 
 
+- `PBS -P <NCI poject code>`
+- `PBS -lstorage` - specify all required NCI storage paths eg `-l storage=<scratch/a00+gdata/xy11+massdata/a00>`
+- `PBS -l ncpus=` - adjust this based on your number of fastq pairs to be split. Each split task is assigned 4 CPU. Eg 100 fastq pairs = 100 X 4 CPU = 400 CPUs = 400/48 CPUs per normal node = 8.3 nodes = round up to 9 nodes = 48 X 9 = 432 CPUs.   
+- `PBS -l mem=` - for ncpus < 48, set to 4 x the number of ncpus. For whole nodes, request number of nodes X 190 GB mem. 
+- `PBS -l walltime=` - adjust based on size of input fastq (assess based on largest pair). A safe starting point is 2 hours for a 30X sample not multiplexed across lanes ie only one large pair of fastq per sample. 
 
+### Submit
+```
+qsub Scripts/split_fastq_run_parallel.pbs
+```
+
+### Check 
+- Output is split fastq pairs in `./Fastq_split`. These will have the same filename suffix as the original, with a numerber added at the start. 
+- Exit status 0 and appropriate walltime in `PBS_logs/split_fastq.o`
+- All tasks have "exited with status 0" in `PBS_logs/split_fastq.e`:
+
+```
+grep "exited with status 0" PBS_logs/split_fastq.e | wc -l
+```
+
+- The number should match the number of fastq in your input list. If not, use grep to obtain the failed tasks, make a separate input list, and resubmit those tasks, correcting any errors or revising the walltime as required. 
 
 
 ### Notes on fastp
-- The terminal files will be smaller than the split size, because the input fastq is unlikely to be equally divisable by the split value
-- The output files will have a numeric prefix added by fastp. These are not always perfectly numeric ascending, ie you may have files `1.<fastq>.gz`, `2.<fastq>.gz`, `4.<fastq>.gz`. This is not an error. There is a checker script (4) inlcuded in this repository to ensure accurate splitting. 
+- The terminal split files will be smaller than the specified split size, because the input fastq is unlikely to be equally divisable by the split value
+- The output files will have a numeric prefix added by fastp. These are not always perfectly numeric ascending, ie you may have files `1.<fastq>.gz`, `2.<fastq>.gz`, `4.<fastq>.gz`. This is not an error. There is a checker script (step 4) inlcuded in this repository to ensure accurate splitting. 
 
 ## 4. Split fastq check 
 
-## 5. Align split fastq
+This ensures you have equal reads in your R1 and R2 as well a that the splitting process has not introduced any errors. 
+
+It is a parallel script, yet there is need to create a new inputs file, as the `./Inputs/split_fastq.inputs` file from the splitting step is used. 
+
+### Submit
+
+Adjust the PBS directives as described for previous parallel steps, accomodating for 12 CPU per parallel task, then submit:
+
+```
+qsub split_fastq_check_fastq_input_vs_split_output_run_parallel.pbs
+```
+
+### Check
+- Check the PBS logs `./PBS_logs/check_split_fastq.o ` and `./PBS_logs/check_split_fastq.o ` as described for previous parallel steps
+- Check the log files in `./Logs/Check_fastq_split`:  
+
+```
+grep "has passed all checks" ./Logs/Check_fastq_split/* | wc -l
+```
+
+- The number should match the number of fastq pairs in your input list. If not, review the logs to isoalt ethe source of error, use grep to obtain the failed tasks, make a separate input list, and resubmit those tasks, correcting any errors or revising the walltime as required. 
+
+## 5. Align the split fastq
+
+Alignment is performed with [`bwa-mem2`](https://github.com/bwa-mem2/bwa-mem2) which is up to 2X faster than `bwa-mem1` with identical results. The K value is applied to ensure thread count does not affect alignment output due to random seeding.
+
+This is the first step in the workflow that requires your sample configuration file. Please snrue this matches the format described in [Example configuration file](#example-configuration-file). 
+
+### Make parallel inputs file
+
+First, open the scipt and update the variable `ref` to your reference fasta, eg `ref=./Reference/mygenome.fasta`. No other changes are required. 
+
+Save the script and provide the sample configuration file name as a command line argument: 
+```
+bash Scripts/align_make_input.sh <samples.config>
+```
+### Edit the PBS script 
+
+Edit `Scripts/align_run_parallel.pbs`: 
+
+- Edit the project code and lstorage directives
+- `PBS -l ncpus=` - adjust this based on your number of alignment tasks/split fastq pairs and the number of CPus per alignment task. Eg 500 split fastq pairs and 12 CPUs per alignment task = 500 X 12 = 6000 ncpus = 125 Gadi normal nodes. If you have determined from benchmarking that a split fastq of your chosen size required 10 minutes to align to your genome on 12 CPU, this would be 125 nodes for 10 minutes. This is reasonable, however you may also choose to halve the number of nodes and double the walltime requested, or quarter the number of nodes and quadruple the walltime requested, etc etc, to process the list of alignment tasks in a way that not all tasks are allocated simultaneously. For large cohorts, this is typically the better way to proceed, as we can quickly hit the upper limit of 432 maximum normal nodes per job. For very large cohorts, dividing the `Inputs/align.inputs` list into batches and submitting multiple parallel jobs may be required. Given that some loss of efficiency is typically observed at scale, ensure to add some walltime buffer, eg request 45 minutes if you expect a walltime of 30 minutes. Tasks that fail on walltime can be identified and resubmitted.   
+- `PBS -l mem=` - for ncpus < 48, set to 4 x the number of ncpus. For whole nodes, request number of nodes X 190 GB mem. 
+- `PBS -l walltime=` - adjust based on the number of alignment tasks, walltime per task, desired walltime buffer, and `PBS -l ncpus=` 
+-`NCPUS` variable: this is the number of CPU assigned to each parallel task. It is not a PBS directive. You should have determined the optimal split size and CPUs per alignment task from prior benchmarking. The default in this script is 12. Recommended values are 4, 6 or 12. This is based on the NUMA architecture of the Gadi normal (Cascade Lake) nodes as well as the goal of parallelising many smaller tasks for higher throuhgput rather than fewer larger tasks. 
+
+### Submit
+
+```
+qsub Scripts/align_run_parallel.pbs
+```
+
+### Check 
+- Check the PBS logs `./PBS_logs/align.o` and `./PBS_logs/align.e` as previosuly described, ensuring that the number of tasks that "exited with status 0" is equal to the number of alignment tasks in the `./Inputs/align.inputs` file. 
+- Note that for a job that is killed due to exceeding walltime, some tasks may not appear in the `./PBS_logs/align.e` file. In this case, additional methods will be required to extract the tasks that are needing to be resubmitted. Future updates to this workflow will include a check script for this. 
+- Alignment output will be `./Align_split/<prefix>.nameSorted.bam`, one BAM per input split fastq pair. 
+- `./Logs/Align_split_error_capture` should be empty for a successful job. This will report any BAMs that fail `SAMtools quickcheck` or are missing key completion mesages in the `BWA` logs. As per the PBS log checking, if the job fails on walltime, relying on this error check alone may miss some failed tasks that were not submitted before the job terminated.
+
 
 ## 6. Create final BAMs (merge, mark duplicates, sort, index)
+
+This job is parallel by sample, so the number of tasks will be equal to the number of samples. 
+
+It merges (gathers) the split (scattered) alignment files, completing the scatter-gather parallelism enabled by physically splitting the fastq. Merging is performed with [`SAMBAMBA`](https://github.com/biod/sambamba), duplicate marking with [`SAMBLASTER`](https://github.com/GregoryFaust/samblaster) and sorting and indexing with [`SAMtools`](https://github.com/samtools/samtools). 
+
+### Make parallel inputs file
+ 
+```
+bash Scripts/final_bam_make_input.sh <samples.config>
+```
+### Edit the PBS script 
+
+Edit `Scripts/final_bam_run_parallel.pbs`: 
+
+- Edit the project code and lstorage directives as previosuly described
+- Adjust directives for ncpus and mem according to the number of samples
+- If you are unsure of the resources required, running this script on your largest sample with generous limits is a helful benchmark to perform
+- As a starting point, 30X sample on 24 CPU normal nodes (allowing 4 GB mem per CPU) completed in 85 minutes
+- For very large samples (eg 90X), increasing to one node per sample (ie set NCPUs variable to 48) and manually editing the `Scripts/align.sh` task script to apply 36 threads to SAMtools sort may be required. Alternatively, run all samples on the Gadi Broadwell nodes (`normalbw` queue) setting the NCPUs variable to 48 and requesting 9 GB RAM per CPU. The Broadwell nodes are older and slower than the newer Cascade Lake nodes on the `normal` queue, but can provide more RAM per CPU. Using the Broadwell nodes in these cases will probably require more walltime but result in overall less KSU compared to allowing one whole Cascade Lake node per sample. 
 
 ## 7. BAM QC
 
