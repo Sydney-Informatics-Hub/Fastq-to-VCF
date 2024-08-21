@@ -29,7 +29,9 @@ then
 else
         config=$1
 fi
-	
+
+platform=ILLUMINA
+ 
 inputs=./Inputs/align.inputs
 rm -f $inputs
 
@@ -48,8 +50,7 @@ do
 	sample=`echo $LINE | cut -d ' ' -f 1`
 	labSampleID=`echo $LINE | cut -d ' ' -f 2`
 	centre=`echo $LINE | cut -d ' ' -f 3`
-	platform=`echo $LINE | cut -d ' ' -f 4`
-	lib=`echo $LINE | cut -d ' ' -f 5`
+	lib=`echo $LINE | cut -d ' ' -f 4`
 	
 	if [ ! "$lib" ]
 	then
