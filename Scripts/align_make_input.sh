@@ -81,11 +81,16 @@ do
 			err=${errdir}/${prefix}.err
 			log=${logdir}/${prefix}.log
 			rm -rf $out $err $log
+   			bytes=$(ls -lL ${fq1} | awk '{print $5}')
 			
-			printf "${fq1},${fq2},${labSampleID},${centre},${lib},${platform},${flowcell},${lane},${ref},${out},${err},${log}\n" >> $inputs
+			printf "${fq1},${fq2},${labSampleID},${centre},${lib},${platform},${flowcell},${lane},${ref},${out},${err},${log},${bytes}\n" >> $inputs
 	
 		done			
 	done			
 done	
+
+# Reverse numeric sort on byte size
+sort -rnk 13 -t ',' ${inputs} > ${inputs}-sorted
+mv ${inputs}-sorted ${inputs}
 
 printf "`wc -l < ${inputs}` alignment task input lines writen to ${inputs}\n"
