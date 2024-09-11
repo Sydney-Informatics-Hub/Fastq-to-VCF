@@ -24,7 +24,7 @@
 inputs=./Inputs/split_fastq.inputs
 rm -rf $inputs
 
-split=2000000 # number of fastq lines per output file (divide by 4 gives number of reads)
+split=40000000 # number of fastq lines per output file (divide by 4 gives number of reads)
 
 outdir=./Fastq_split
 logdir=./Logs/Fastq_split
