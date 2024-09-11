@@ -282,9 +282,9 @@ Edit `Scripts/final_bam_run_parallel.pbs`:
 
 ## 7. BAM QC
 
-There are many tools for running QC on BAM files. We have a beta nextflow [repository BamQC-nf](https://github.com/Sydney-Informatics-Hub/bamQC-nf) that has modules for `SAMtools stats`, `SAmtools idxstats`, `Qualimap` and `Mosdepth`. Qualimap gives very comprehensive results however is resource intensive so may be prohibitively costly for large cohorts. `SAMtools stats` gives detailed output for a very small resource footprint. 
+There are many tools for running QC on BAM files. We have a beta nextflow [repository BamQC-nf](https://github.com/Sydney-Informatics-Hub/bamQC-nf) that has modules for `SAMtools stats`, `SAMtools flagstats`, `Qualimap` and `Mosdepth`. Qualimap gives very comprehensive results however is resource intensive so may be prohibitively costly for large cohorts. `SAMtools stats` gives detailed output for a very small resource footprint. 
 
-The table below shows the optiomal benchmarked resources for the NA12890 Platonum Genomes sample:
+The table below shows the optiomal benchmarked resources for the NA12890 Platinum Genomes sample:
 
 | Job                | CPU | Queue    | Mem_requested | Mem_used | CPUtime_mins | Walltime_mins | CPU_Efficiency | Service_units |
 |--------------------|-----|----------|---------------|----------|--------------|---------------|----------------|---------------|
@@ -293,7 +293,7 @@ The table below shows the optiomal benchmarked resources for the NA12890 Platonu
 | mosdepth           | 2   | normal   | 8.0GB         | 8.0GB    | 18.95        | 11            | 0.86           | 0.73          |
 | qualimap           | 14  | normalbw | 126.0GB       | 98.14GB  | 319.57       | 82.18         | 0.28           | 23.97         |
 
-Users are encouraged to either use [repository BamQC-nf](https://github.com/Sydney-Informatics-Hub/bamQC-nf) ***or*** take a copy of a trio of scripts from one of the parallel steps of this workflow and run the desired BAM-QC tool, using the above benchmarks as a guide for setting up resources. 
+Users are encouraged to either use [repository BamQC-nf](https://github.com/Sydney-Informatics-Hub/bamQC-nf) ***or*** take a copy of a trio of scripts from one of the parallel steps of this workflow and modify to run the desired BAM-QC tool, using the above benchmarks as a guide for setting up resources. 
 
 ## 8. BAM QC multiQC
 
