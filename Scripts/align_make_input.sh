@@ -30,7 +30,10 @@ else
         config=$1
 fi
 
-platform=ILLUMINA
+# Just in case... 
+dos2unix $config
+
+platform='ILLUMINA'
  
 inputs=./Inputs/align.inputs
 rm -f $inputs
@@ -56,19 +59,25 @@ do
 	then
 	    	lib=1
 	fi
+
+	fqpairs=($(ls ${fastq_dir}/*${sample}*.f*.gz | sed 's/_R1\..*\|_R2\..*\|_R1_.*\|_R2_.*\|\.R1.\.*\|\.R2.\.*//' | uniq))
 		
-	fqpairs=($(ls ${fastq_dir}/*${sample}*.f*.gz | sed 's/_R1.*\|_R2.*\|_R1_*\|_R2_*\|.R1.*\|.R2.*//'  | uniq))
-	
 	#Get the flowcell and lane info from the original pairs:	
 	for fqpair in ${fqpairs[@]}
-	do
+	do	
 		#### CHECK THAT ALL YOUR FASTQ MATCHES THIS READ ID FORMAT ###		
-		flowcell=$(zcat ${fqpair}*R1*.fastq.gz | head -1 | cut -d ':' -f 3)
-		lane=$(zcat ${fqpair}*R1*.fastq.gz | head -1 | cut -d ':' -f 4)	
+		flowcell=$(zcat ${fqpair}*R1*.f*q.gz | head -1 | cut -d ':' -f 3)
+		lane=$(zcat ${fqpair}*R1*.f*q.gz | head -1 | cut -d ':' -f 4)	
+		
+		# Allow for SRA reads: 
+		if [[ $flowcell == @SRR* ]]
+		then
+			flowcell=unknown
+			lane=unknown
+		fi
 
 		#Print each of the split chunks with flowcell and lane info to inputs file:
 		set=$(basename ${fqpair})
-		echo $set
 
 		splitpairs=($(ls ${fastq_split_dir}/*${set}*R1*.f*q.gz | sed -E 's/R1\.(fastq|fq)\.gz$//'))
 
@@ -83,8 +92,7 @@ do
 			rm -rf $out $err $log
    			bytes=$(ls -lL ${fq1} | awk '{print $5}')
 			
-			printf "${fq1},${fq2},${labSampleID},${centre},${lib},${platform},${flowcell},${lane},${ref},${out},${err},${log},${bytes}\n" >> $inputs
-	
+			printf "${fq1},${fq2},${labSampleID},${centre},${lib},${platform},${flowcell},${lane},${ref},${out},${err},${log},${bytes}\n" >> $inputs	
 		done			
 	done			
 done	
