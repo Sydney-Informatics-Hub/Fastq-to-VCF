@@ -20,6 +20,7 @@ All software used in this workflow are globally installed on Gadi, except GLnexu
 # Input files
 
 1. Copy or symlink your paired gzipped fastq files to `./Fastq`
+	- If you have fastq with '1' and '2' pair designation instead of 'R1' and 'R2', please rename/symlink to 'R1' and 'R2' 
 2. Copy or symlink your reference fasta to `./Reference`
 3. Create your sample configuration file, which has one row per sample
 
@@ -226,11 +227,13 @@ grep "has passed all checks" ./Logs/Check_fastq_split/* | wc -l
 
 Alignment is performed with [`bwa-mem2`](https://github.com/bwa-mem2/bwa-mem2) which is up to 2X faster than `bwa-mem1` with identical results. The K value is applied to ensure thread count does not affect alignment output due to random seeding.
 
-This is the first step in the workflow that requires your sample configuration file. Please snrue this matches the format described in [Example configuration file](#example-configuration-file). 
+This is the first step in the workflow that requires your sample configuration file. Please ensure this matches the format described in [Example configuration file](#example-configuration-file). 
 
 ### Make parallel inputs file
 
-First, open the scipt and update the variable `ref` to your reference fasta, eg `ref=./Reference/mygenome.fasta`. No other changes are required. 
+First, open the scipt and update the variable `ref` to your reference fasta, eg `ref=./Reference/mygenome.fasta`. Check that the regex for the fastq pair matching matches your reads and adjust as required. Expected filename format is <prefix>_R1.fastq.gz, <prefix>_R1.fq.gz, <prefix>.R1.fastq.gz or <prefix>.R1.fq.gz.
+
+Flowcell and lane are extracted from Illumina-formatted read ID. If your read IDs do not match this format, please adjust the regex as required. Allowance is made for SRA-derived reads by checking for read ID beginning with '@SRR' and using 'unknown' for flowcell and lane.  
 
 Save the script and provide the sample configuration file name as a command line argument: 
 ```
