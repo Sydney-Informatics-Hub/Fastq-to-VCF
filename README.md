@@ -3,13 +3,6 @@ High throughput illumina mammalian whole genome sequence analysis and joint geno
 
 This workflow was written for NCI Gadi HPC and uses the `nci-parallel` custom utility to parallelise tasks across the cluster with PBS Pro and Open-MPI. Adaptation to other infrastructures will need to adjust this parallelisation method. 
 
-# ⚠️ Notice of workflow deprecation
-This workflow is no longer actively supported or maintained. While you are welcome to use the existing code, please note that no further updates, bug fixes, or support will be provided.
-
-For questions or alternative recommendations for University of Sydney staff and students, please get in touch with sih_info@sydney.edu.au. You can find alternatives at [WorkflowHub](https://workflowhub.eu/)
-
-Thank you for your understanding!
-
 # Usage overview
 
 Clone the repository and change into it
