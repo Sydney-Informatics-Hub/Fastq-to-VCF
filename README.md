@@ -309,6 +309,22 @@ multiqc <bamqcdir1> <bamqcdir2> -o <BAM-QC-out>
 
 ## 9. Create per sample gVCF
 
+This step uses [DeepVariant](https://github.com/google/deepvariant)([Poplin et al 2018](https://www.nature.com/articles/nbt.4235) deep learning based variant caller to produce gVCF per sample. You do not need to install DeepVariant on Gadi as it is available within the [NVIDIA Parabricks](https://docs.nvidia.com/clara/parabricks/latest/index.html) package, which is available as a global app on Gadi. 
+
+Unlike previous steps where `nci-parallel` is used to parallelise tasks, this step uses a wrapper/run script to launch each sample as a separate job. This is due to the use of GPU, a more scarce resource compared to the normal node CPU. 
+
+- Update the variable `ref` within `./Scripts/deepvariant_run_loop.sh` to the name of your reference fasta within the `./Reference` directory
+- Update your project code at `#PBS -P` and scratch/gdata paths at `#PBS -lstorage` directives within `./Scripts/deepvariant.pbs`
+
+Save both scripts, then submit:
+```
+bash ./Scripts/deepvariant_run_loop.sh <config>
+```
+
+As the script loops over your config, it will submit `./Scripts/deepvariant.pbs` separately for each sample in your config. You should expect to see a message `Submitting <labSampleID>` followed by a job ID for each sample. 
+
+Ensure to check all job logs in `./PBS_logs/DeepVariant` and `./Logs/DeepVariant` to ensure exit stauts zero and no error messages, and that all samples have a gVCF of expected size in the `./gVCF` output directory.
+
 ## 10. Joint genotype 
 
 A jointly genotyped VCF is created for all samples in the cohort using [GLNexus](https://github.com/dnanexus-rnd/GLnexus)([Fin et al 2018](https://github.com/dnanexus-rnd/GLnexus)). 
@@ -346,4 +362,5 @@ Example run time: 55 minutes on 6 `hugemem` CPU for a cohort of 25 30X mammalian
 Expected output is a gzipped VCF in `./Joint_VCF` with the name of your cohort as prefix, and a tabix index. 
 
 Check the job completed successfully by reviewing logs in `./Logs/GLnexus` as well as `./PBS_logs/joint_genotype.o` and `./PBS_logs/joint_genotype.e`. 
+
 
