@@ -271,17 +271,38 @@ It merges (gathers) the split (scattered) alignment files, completing the scatte
 ### Make parallel inputs file
  
 ```
-bash Scripts/final_bam_make_input.sh <samples.config>
+bash ./Scripts/final_bam_make_input.sh <samples.config>
 ```
 ### Edit the PBS script 
 
-Edit `Scripts/final_bam_run_parallel.pbs`: 
+Edit `./Scripts/final_bam_run_parallel.pbs`: 
 
 - Edit the project code and lstorage directives as previosuly described
 - Adjust directives for ncpus and mem according to the number of samples
 - If you are unsure of the resources required, running this script on your largest sample with generous limits is a helful benchmark to perform
 - As a starting point, 30X sample on 24 CPU normal nodes (allowing 4 GB mem per CPU) completed in 85 minutes
-- For very large samples (eg 90X), increasing to one node per sample (ie set NCPUs variable to 48) and manually editing the `Scripts/align.sh` task script to apply 36 threads to SAMtools sort may be required. Alternatively, run all samples on the Gadi Broadwell nodes (`normalbw` queue) setting the NCPUs variable to 48 and requesting 9 GB RAM per CPU. The Broadwell nodes are older and slower than the newer Cascade Lake nodes on the `normal` queue, but can provide more RAM per CPU. Using the Broadwell nodes in these cases will probably require more walltime but result in overall less KSU compared to allowing one whole Cascade Lake node per sample. 
+- For very large samples (eg 90X), increasing to one node per sample (ie set NCPUs variable to 48) and manually editing the `Scripts/align.sh` task script to apply 36 threads to SAMtools sort may be required. Alternatively, run all samples on the Gadi Broadwell nodes (`normalbw` queue) setting the NCPUs variable to 48 and requesting 9 GB RAM per CPU. The Broadwell nodes are older and slower than the newer Cascade Lake nodes on the `normal` queue, but can provide more RAM per CPU. Using the Broadwell nodes in these cases will probably require more walltime but result in overall less KSU compared to allowing one whole Cascade Lake node per sample.
+
+### Submit
+
+Save the script, then submit with:
+
+```
+qsub ./Scripts/final_bam_run_parallel.pbs
+```
+
+### Check the job
+
+Expected output is a BAM file and BAI for each sample within `./Final_bam` as well as 'split' and 'disc' (split reads and discordant pairs) BAMs in `./Split_disc`. 
+
+Please check all BAMs are of expected size, check for exit status of zero within `./PBS_logs/final_bam.o`, and that all individual sample tasks have exit status of zero: 
+
+```
+grep "exited with status 0" PBS_logs/final_bam.e | wc -l
+```
+
+The number should match the number of samples. Samples with non-zero task exit status should be investigated and resubmitted individually, potentially with higher walltime or memory. 
+
 
 ## 7. BAM QC
 
@@ -363,4 +384,18 @@ Expected output is a gzipped VCF in `./Joint_VCF` with the name of your cohort a
 
 Check the job completed successfully by reviewing logs in `./Logs/GLnexus` as well as `./PBS_logs/joint_genotype.o` and `./PBS_logs/joint_genotype.e`. 
 
+## Step 11. Post-workflow cleanup
+
+After the workflow has completed successfully, **back up** all files you wish to retain to your institutional research data storage paltform. Do not rely on Gadi scratch as your sole data source. 
+
+File to keep:
+- BAM and BAI
+- split and disc files
+- gVCF and index
+- VCF and index
+- scripts and sample config
+- tool logs
+- PBS logs
+
+Intermediate files including split fastq and split BAM files can be safely deleted after the jobs to which they are input have been verified as successful and those outputs backed up. 
 
