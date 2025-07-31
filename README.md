@@ -309,12 +309,12 @@ multiqc <bamqcdir1> <bamqcdir2> -o <BAM-QC-out>
 
 ## 9. Create per sample gVCF
 
-This step uses [DeepVariant](https://github.com/google/deepvariant)([Poplin et al 2018](https://www.nature.com/articles/nbt.4235) deep learning based variant caller to produce gVCF per sample. You do not need to install DeepVariant on Gadi as it is available within the [NVIDIA Parabricks](https://docs.nvidia.com/clara/parabricks/latest/index.html) package, which is available as a global app on Gadi. 
+This step uses [DeepVariant](https://github.com/google/deepvariant) ([Poplin et al 2018](https://www.nature.com/articles/nbt.4235)) deep learning based variant caller to produce gVCF per sample. You do not need to install DeepVariant on Gadi as it is available within the [NVIDIA Parabricks](https://docs.nvidia.com/clara/parabricks/latest/index.html) package, which is available as a global app on Gadi. 
 
 Unlike previous steps where `nci-parallel` is used to parallelise tasks, this step uses a wrapper/run script to launch each sample as a separate job. This is due to the use of GPU, a more scarce resource compared to the normal node CPU. 
 
-- Update the variable `ref` within `./Scripts/deepvariant_run_loop.sh` to the name of your reference fasta within the `./Reference` directory
-- Update your project code at `#PBS -P` and scratch/gdata paths at `#PBS -lstorage` directives within `./Scripts/deepvariant.pbs`
+- Within `./Scripts/deepvariant_run_loop.sh`, update the variable `ref` to the name of your reference fasta within the `./Reference` directory
+- Within `./Scripts/deepvariant.pbs`, update your project code at `#PBS -P` and scratch/gdata paths at `#PBS -lstorage` directives 
 
 Save both scripts, then submit:
 ```
@@ -327,13 +327,13 @@ Ensure to check all job logs in `./PBS_logs/DeepVariant` and `./Logs/DeepVariant
 
 ## 10. Joint genotype 
 
-A jointly genotyped VCF is created for all samples in the cohort using [GLNexus](https://github.com/dnanexus-rnd/GLnexus)([Fin et al 2018](https://github.com/dnanexus-rnd/GLnexus)). 
+A jointly genotyped VCF is created for all samples in the cohort using [GLNexus](https://github.com/dnanexus-rnd/GLnexus) ([Fin et al 2018](https://github.com/dnanexus-rnd/GLnexus)). 
 
-This final step include one script `./Scripts/joint_genotype.pbs`. 
+This final step includes one script `./Scripts/joint_genotype.pbs`. 
 
-You don't need to isntall GLNexus as it is readily available as a BioContainer. 
+You don't need to install GLNexus as it is readily available as a BioContainer. 
 
-- Change directory to where you would like your GLNexus tool contaienr to be saved. We recommend 'gdata`.  Note that if you have singularity environment variables et, this may affect where the container is saved to.
+- Change directory to where you would like your GLNexus tool container to be saved. We recommend 'gdata'.  Note that if you have singularity environment variables set, this may affect where the container is saved to.
 - Run the following commands on the Gadi login node to pull the docker container as a singularity image file:
 
 ```
@@ -349,7 +349,7 @@ Then edit `./Scripts/joint_genotype.pbs`:
 - Update the variable `glnexus_container` to the image file you just pulled. Ensure the storage location is covered by your `lstorage` list
 - Update the `cohort` variable to the prefix of your cohort. This will be used to name your output VCF
 
-Note that the script includes `--config DeepVariantWGS` within the command. This parameter instructs which preset to use depending on the data, eg `DeepVariantWGS` for whole genome sequencing and `DeepVariantWES` for whole exome sequencing. 
+Note that the script includes `--config DeepVariantWGS` within the command. This parameter instructs which presets to use depending on the data, eg `DeepVariantWGS` for whole genome sequencing and `DeepVariantWES` for whole exome sequencing. 
 
 Save the script and submit with:
 
