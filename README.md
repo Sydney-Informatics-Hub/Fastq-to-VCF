@@ -327,4 +327,40 @@ Ensure to check all job logs in `./PBS_logs/DeepVariant` and `./Logs/DeepVariant
 
 ## 10. Joint genotype 
 
+A jointly genotyped VCF is created for all samples in the cohort using [GLNexus](https://github.com/dnanexus-rnd/GLnexus)([Fin et al 2018](https://github.com/dnanexus-rnd/GLnexus)). 
+
+This final step include one script `./Scripts/joint_genotype.pbs`. 
+
+You don't need to isntall GLNexus as it is readily available as a BioContainer. 
+
+- Change directory to where you would like your GLNexus tool contaienr to be saved. We recommend 'gdata`.  Note that if you have singularity environment variables et, this may affect where the container is saved to.
+- Run the following commands on the Gadi login node to pull the docker container as a singularity image file:
+
+```
+module load singularity
+singularity pull docker://quay.io/biocontainers/glnexus:1.4.1--h17e8430_5
+```
+
+You may wish to check [quay.io](https://quay.io/repository/biocontainers/glnexus?tab=tags) for a newer tool version. 
+
+Then edit `./Scripts/joint_genotype.pbs`:
+
+- Update directives `#PBS -P` and `#PBS -lstorage`
+- Update the variable `glnexus_container` to the image file you just pulled. Ensure the storage location is covered by your `lstorage` list
+- Update the `cohort` variable to the prefix of your cohort. This will be used to name your output VCF
+
+Note that the script includes `--config DeepVariantWGS` within the command. This parameter instructs which preset to use depending on the data, eg `DeepVariantWGS` for whole genome sequencing and `DeepVariantWES` for whole exome sequencing. 
+
+Save the script and submit with:
+
+```
+qsub ./Scripts/joint_genotype.pbs
+```
+
+Example run time: 55 minutes on 6 `hugemem` CPU for a cohort of 25 30X mammalian WGS. 
+
+Expected output is a gzipped VCF in `./Joint_VCF` with the name of your cohort as prefix, and a tabix index. 
+
+Check the job completed successfully by reviewing logs in `./Logs/GLnexus` as well as `./PBS_logs/joint_genotype.o` and `./PBS_logs/joint_genotype.e`. 
+
 
