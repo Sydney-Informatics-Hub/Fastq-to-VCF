@@ -309,11 +309,11 @@ multiqc <bamqcdir1> <bamqcdir2> -o <BAM-QC-out>
 
 ## 9. Create per sample gVCF
 
-This step uses [DeepVariant](https://github.com/google/deepvariant)([Poplin et al 2018](https://www.nature.com/articles/nbt.4235) deep leearning based variant caller to produce gVCF per sample. You do not need to install DeepVariant on Gadi as it is available within the [NVIDIA Parabricks](https://docs.nvidia.com/clara/parabricks/latest/index.html) package, which is available as a global app on Gadi. 
+This step uses [DeepVariant](https://github.com/google/deepvariant)([Poplin et al 2018](https://www.nature.com/articles/nbt.4235) deep learning based variant caller to produce gVCF per sample. You do not need to install DeepVariant on Gadi as it is available within the [NVIDIA Parabricks](https://docs.nvidia.com/clara/parabricks/latest/index.html) package, which is available as a global app on Gadi. 
 
 Unlike previous steps where `nci-parallel` is used to parallelise tasks, this step uses a wrapper/run script to launch each sample as a separate job. This is due to the use of GPU, a more scarce resource compared to the normal node CPU. 
 
-- Update the variable `ref` within `./Scripts/deepvariant_run_loop.sh`to the name of your reference fasta within the `./Reference` directory
+- Update the variable `ref` within `./Scripts/deepvariant_run_loop.sh` to the name of your reference fasta within the `./Reference` directory
 - Update your project code at `#PBS -P` and scratch/gdata paths at `#PBS -lstorage` directives within `./Scripts/deepvariant.pbs`
 
 Save both scripts, then submit:
